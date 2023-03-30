@@ -10,7 +10,7 @@ import tensorflow as tf
 from tensorflow import keras
 import numpy as np
 import random
-from NNs.building_blocks import AddPosEmbedding, Transformer_Block
+from NNs.Blocks import AddPosEmbedding, Transformer_Block
 from NNs.Patching import *
 
 settings = dict()
