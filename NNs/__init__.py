@@ -4,4 +4,6 @@ import tensorflow_addons as tfa
 from NNs.Blocks import *
 from NNs.Layers import *
 from NNs.Patching import *
-import NNs
+from NNs import Models
+from NNs import utils
+from NNs import CCT
