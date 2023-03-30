@@ -289,13 +289,16 @@ class MultiHeadSelfLinearAttention(keras.layers.Layer):
         query_sep = self.sep_heads(query, num_heads = self.num_heads)
         key_sep, val_sep = tf.split(kv_sep, 2, axis = -1)
         attention_weight = self.scaled_dot_product_attention(query_sep, key_sep)
+        head_dim = tf.shape(attention_weight)[1]
         attention_value = attention_weight@val_sep
         combined_values = tf.reshape(attention_value, shape = (-1, self.n, self.d))
         output = self._out_dense(combined_values)
         output = self._Dropout(output)
-
+        
         if self.output_weight:
-            output = output, tf.reduce_mean(attention_weight, 1)
+            output = output, tf.pow(tf.reduce_prod(attention_weight, 1),1/head_dim)#tf.pow(tf.reduce_mean(tf.pow(attention_weight,2.0), 1), 1/2) #tf.reduce_mean(attention_weight, 1) 
+            
+            # get arithematic mean or geometric mean? https://jacobgil.github.io/deeplearning/vision-transformer-explainability states that taking min values from the multi-head gives you good score. Max values along with discarding bad tokens will give you better score in this work.
         return output
 
     def get_config(self):
