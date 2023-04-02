@@ -21,13 +21,12 @@ def BasicConv2D(filters,
                 "class_name": "VarianceScaling",
                 "config": {"scale": 2.0, "mode": "fan_out",
                            "distribution": "truncated_normal" }}, 
-              bn_momentum = 0.0,
-              bn_epsilon = 1e-5,
+              Normalization_Layer = keras.layers.BatchNormalization(),
               name = None, 
               **kwargs):
     """ 
     
-    ConvBlock: Base unit of ResNet. keras.layers.Conv2D + BN + activation layers.
+    BasicConv2D Layer: Base unit of ResNet. keras.layers.Conv2D + BN + activation layers.
 
     Args: Argument style inherits keras.layers.Conv2D
         filters (int): # of channels.
@@ -54,9 +53,7 @@ def BasicConv2D(filters,
                                 use_bias = use_bias,
                                 **kwargs
                                 )(x)
-        x = keras.layers.BatchNormalization( momentum = bn_momentum,
-                                             epsilon = bn_epsilon,
-            name = name +"_batch_norm")(x)
+        x = Normalization_Layer(x)
         if activation:
             x = keras.layers.Activation(activation, name = name +"_act")(x)
         return x
@@ -409,3 +406,34 @@ class TokenRemoval(keras.layers.Layer):
     @classmethod
     def from_config(cls, config):
         return cls(**config)
+    
+    
+#https://stackoverflow.com/questions/66305623/group-normalization-and-weight-standardization-in-keras
+
+class WeightStandardizedConv2D(tf.keras.layers.Conv2D):
+    def __init__(self, *args, **kwargs):
+        super().__init__(kernel_initializer="he_normal", *args, **kwargs)
+
+    def standardize_weight(self, weight, eps):
+
+        mean = tf.math.reduce_mean(weight, axis=(0, 1, 2), keepdims=True)
+        var = tf.math.reduce_variance(weight, axis=(0, 1, 2), keepdims=True)
+        dims = tf.reduce_prod(tf.shape(weight)[:-1])
+        factor = self.add_weight(
+            name="factor",
+            shape=(tf.shape(weight)[-1],),
+            initializer="ones",
+            trainable=True,
+            dtype=self.dtype,
+        )
+        scale = (
+            tf.math.rsqrt(
+                tf.math.maximum(var * dims, tf.convert_to_tensor(eps, dtype=self.dtype))
+            )
+            * factor
+        )
+        return weight * scale - (mean * scale)
+
+    def call(self, inputs, eps=1e-4):
+        self.kernel.assign(self.standardize_weight(self.kernel, eps))
+        return super().call(inputs)
