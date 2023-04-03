@@ -1,5 +1,4 @@
 import tensorflow as tf
-from tensorflow import keras
 from functools import partial
 
 
@@ -21,29 +20,29 @@ def BasicConv2D(filters,
                 "class_name": "VarianceScaling",
                 "config": {"scale": 2.0, "mode": "fan_out",
                            "distribution": "truncated_normal" }}, 
-              Normalization_Layer = keras.layers.BatchNormalization(),
+              Normalization_Layer = tf.keras.layers.BatchNormalization(),
               name = None, 
               **kwargs):
     """ 
     
-    BasicConv2D Layer: Base unit of ResNet. keras.layers.Conv2D + BN + activation layers.
+    BasicConv2D Layer: Base unit of ResNet. tf.keras.layers.Conv2D + BN + activation layers.
 
-    Args: Argument style inherits keras.layers.Conv2D
+    Args: Argument style inherits tf.keras.layers.Conv2D
         filters (int): # of channels.
         kernel_size (int): kernel size.
         strides (int, optional): strides in the Conv2D operation . Defaults to 1.
         padding (str, optional): padding in the Conv2D operation. Defaults to "same".
-        activation (str, optional): name of the activation function. keras.layers.Activation. Defaults to "relu".
+        activation (str, optional): name of the activation function. tf.keras.layers.Activation. Defaults to "relu".
         name (str, optional): name of the layer. Defaults to None.
         
     """
     if name is None: # adopted this structure from tf.kera
-        counter = keras.backend.get_uid("conv_")
+        counter = tf.keras.backend.get_uid("conv_")
         name = f"conv_{counter}"
       
     def apply(inputs):
         x = inputs
-        x = keras.layers.Conv2D(filters = filters,
+        x = tf.keras.layers.Conv2D(filters = filters,
                                 kernel_size = kernel_size,
                                 padding = padding,
                                 strides = strides,
@@ -55,7 +54,7 @@ def BasicConv2D(filters,
                                 )(x)
         x = Normalization_Layer(x)
         if activation:
-            x = keras.layers.Activation(activation, name = name +"_act")(x)
+            x = tf.keras.layers.Activation(activation, name = name +"_act")(x)
         return x
     
     return apply
@@ -64,7 +63,7 @@ def BasicConv2D(filters,
 # Adopted from: https://github.com/faustomorales/vit-keras/blob/master/vit_keras/utils.py
 # Also learn: https://keras.io/guides/making_new_layers_and_models_via_subclassing/
 
-class MultiHeadSelfAttention(keras.layers.Layer):
+class MultiHeadSelfAttention(tf.keras.layers.Layer):
     def __init__(self, *args, num_heads, DropOut_rate = 0.1, output_weight = False, **kwargs):
         super().__init__(*args, **kwargs)
         self.num_heads = num_heads
@@ -80,11 +79,11 @@ class MultiHeadSelfAttention(keras.layers.Layer):
               )
         self.hidden_size = hidden_size
         self.projection_dim = hidden_size // num_heads
-        self.query_dense = keras.layers.Dense(hidden_size, name = "dense_query")
-        self.key_dense = keras.layers.Dense(hidden_size, name = "dense_key")
-        self.value_dense = keras.layers.Dense(hidden_size, name = "dense_value")
-        self.out_dense = keras.layers.Dense(hidden_size, name = "dense_out")
-        self.Dropout = keras.layers.Dropout(rate = self.DropOut_rate)
+        self.query_dense = tf.keras.layers.Dense(hidden_size, name = "dense_query")
+        self.key_dense = tf.keras.layers.Dense(hidden_size, name = "dense_key")
+        self.value_dense = tf.keras.layers.Dense(hidden_size, name = "dense_value")
+        self.out_dense = tf.keras.layers.Dense(hidden_size, name = "dense_out")
+        self.Dropout = tf.keras.layers.Dropout(rate = self.DropOut_rate)
         self.CalcAttention = partial(self.ScaledDotProductAttention, dim  = self.projection_dim)
 
     def ScaledDotProductAttention(self, query, key, value, dim):
@@ -135,7 +134,7 @@ class MultiHeadSelfAttention(keras.layers.Layer):
         return cls(**config)
     
 # Positional embedding
-class AddPosEmbedding(keras.layers.Layer):
+class AddPosEmbedding(tf.keras.layers.Layer):
     
     def __init__(self, 
                  num_patches, 
@@ -213,7 +212,7 @@ class AddPosEmbedding(keras.layers.Layer):
         return input
     
     
-class MultiHeadSelfLinearAttention(keras.layers.Layer):
+class MultiHeadSelfLinearAttention(tf.keras.layers.Layer):
     def __init__(self, *args, 
                  num_heads, 
                  kv_reprojection_dim,
@@ -243,18 +242,18 @@ class MultiHeadSelfLinearAttention(keras.layers.Layer):
         self.d = embedding_dim
         self.n = num_tokens 
         self.d_sep = self.d // num_heads
-        self._query_dense = keras.layers.Dense(self.d, name = "query")
-        self._kv_dense = keras.layers.Dense(self.d*2, name = "key_and_value")
-        #self._token_reproj = keras.layers.EinsumDense("bnd,nk->bkd", 
+        self._query_dense = tf.keras.layers.Dense(self.d, name = "query")
+        self._kv_dense = tf.keras.layers.Dense(self.d*2, name = "key_and_value")
+        #self._token_reproj = tf.keras.layers.EinsumDense("bnd,nk->bkd", 
         #                                          output_shape = (self.k, None),
         #                                          name = "token_reproj"
         #                                          )
         if self.kernel_size:
-            self._channelwise_conv1D = keras.layers.DepthwiseConv1D(kernel_size = self.kernel_size, 
+            self._channelwise_conv1D = tf.keras.layers.DepthwiseConv1D(kernel_size = self.kernel_size, 
                                                                     strides = self.kernel_size,
                                                                     activation = None)
-        self._out_dense = keras.layers.Dense(self.d, name = "out")
-        self._Dropout = keras.layers.Dropout(rate = self.DropOut_rate)
+        self._out_dense = tf.keras.layers.Dense(self.d, name = "out")
+        self._Dropout = tf.keras.layers.Dropout(rate = self.DropOut_rate)
 
     def sep_heads(self, x, num_heads):
         b = self.b
@@ -272,7 +271,7 @@ class MultiHeadSelfLinearAttention(keras.layers.Layer):
         scale = tf.math.sqrt(tf.cast(tf.shape(key)[-1], dtype = score.dtype))
         scaled_score = score / scale
         weights = tf.nn.softmax(scaled_score, axis = -1)
-        weights = keras.layers.Dropout(self.attention_DropOut_rate)(weights)
+        weights = tf.keras.layers.Dropout(self.attention_DropOut_rate)(weights)
         return weights
 
     def call(self, inputs):
@@ -327,7 +326,7 @@ def SeqPool(n_attn_channel = 1):
     return apply
 
 
-class TokenRemoval(keras.layers.Layer):
+class TokenRemoval(tf.keras.layers.Layer):
     """ 
     TokenRemoval Layer. Adopted idea from https://arxiv.org/abs/2202.07800.
     """

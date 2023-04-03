@@ -6,7 +6,7 @@ from NNs.Layers import *
 
 # Feed Forward Network (FFN)
 
-class FeedForwardNetwork(keras.layers.Layer):
+class FeedForwardNetwork(tf.keras.layers.Layer):
     def __init__(self, *args, mlp_ratio,
                                 DropOut_rate,
                                 activation = 'gelu',
@@ -19,10 +19,10 @@ class FeedForwardNetwork(keras.layers.Layer):
     def build(self, input_shape):
         embedding_dim = input_shape[-1]
         overhead_dim = int(embedding_dim*self.mlp_ratio)
-        self.Dense_hidden = keras.layers.Dense(units = overhead_dim, name = "dense_hidden")
-        self.Dense_out = keras.layers.Dense(units = embedding_dim, name = "dense_out")
-        self.Activation = keras.layers.Activation(self.activation)
-        self.Dropout = keras.layers.Dropout(rate = self.DropOut_rate)
+        self.Dense_hidden = tf.keras.layers.Dense(units = overhead_dim, name = "dense_hidden")
+        self.Dense_out = tf.keras.layers.Dense(units = embedding_dim, name = "dense_out")
+        self.Activation = tf.keras.layers.Activation(self.activation)
+        self.Dropout = tf.keras.layers.Dropout(rate = self.DropOut_rate)
         
     
     def call(self, inputs):
@@ -101,23 +101,23 @@ def MB4D_Block(mlp_ratio,
         
         #MLP substitude
         x1 = pooling_output
-        x1 = keras.layers.Conv2D(
+        x1 = tf.keras.layers.Conv2D(
             activation = None,
             filters = embedding_dims*mlp_ratio,
             kernel_size = 1,
             strides = 1,
             padding = 'same')(x1)
-        x1 = keras.layers.BatchNoramlization()(x1)
-        x1 = keras.layers.Dropout(DropOut_rate)(x1)
-        x1 = keras.layers.Activation(activation)(x1)
-        x1 = keras.layers.Conv2D(
+        x1 = tf.keras.layers.BatchNoramlization()(x1)
+        x1 = tf.keras.layers.Dropout(DropOut_rate)(x1)
+        x1 = tf.keras.layers.Activation(activation)(x1)
+        x1 = tf.keras.layers.Conv2D(
             activation = None,
             filters = embedding_dims,
             kernel_size = 1,
             strides = 1,
             padding = 'same')(x1)
-        x1 = keras.layers.BatchNoramlization()(x1)
-        x1 = keras.layers.Dropout(DropOut_rate)(x1)
+        x1 = tf.keras.layers.BatchNoramlization()(x1)
+        x1 = tf.keras.layers.Dropout(DropOut_rate)(x1)
         if stochastic_depth_rate:
             x1 = DropPath(stochastic_depth_rate)(x1)
         
@@ -187,7 +187,7 @@ def BN_Res_Block( target_channels,
                               )(r)
 
         x = tf.keras.layers.Add()([skip_connection, r])
-        x = keras.layers.Activation(activation, name = name +"_act")(x)
+        x = tf.keras.layers.Activation(activation, name = name +"_act")(x)
     
         return x
 
@@ -230,7 +230,7 @@ def Inverted_BN_Block(in_channels,
                         # Look for padding = 1 in torch!! documents!
           #if use_se:
               # implement SE layer 
-          x = keras.layers.Activation(act_ftn)(x)
+          x = tf.keras.layers.Activation(act_ftn)(x)
           x = BasicConv2D(filters = out_channels,
                         kernel_size = 1,
                         strides = 1,
