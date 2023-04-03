@@ -84,12 +84,11 @@ class MultiHeadSelfAttention(tf.keras.layers.Layer):
         self.value_dense = tf.keras.layers.Dense(hidden_size, name = "dense_value")
         self.out_dense = tf.keras.layers.Dense(hidden_size, name = "dense_out")
         self.Dropout = tf.keras.layers.Dropout(rate = self.DropOut_rate)
-        self.CalcAttention = partial(self.ScaledDotProductAttention, dim  = self.projection_dim)
 
-    def ScaledDotProductAttention(self, query, key, value, dim):
+    def ScaledDotProductAttention(self, query, key, value):
         score = tf.matmul(query, key, transpose_b = True)
-        #dim_key = tf.cast(tf.shape(key)[-1], dtype = score.dtype)
-        scaled_score = score / tf.math.sqrt(dim)
+        dim_key = tf.cast(tf.shape(key)[-1], dtype = score.dtype)
+        scaled_score = score / tf.math.sqrt(dim_key)
         weights = tf.nn.softmax(scaled_score, axis = -1)
         weights = self.Dropout(weights)
         output = tf.matmul(weights, value)
@@ -111,7 +110,7 @@ class MultiHeadSelfAttention(tf.keras.layers.Layer):
         
         query, key, value = [self.separate_to_multihead(tensor, batch_size) for tensor in [query, key, value]]
         
-        weighted_value, weights = self.CalcAttention(query, key, value)
+        weighted_value, weights = self.ScaledDotProductAttention(query, key, value)
         weighted_value = tf.transpose(weighted_value, perm = [0, 2, 1, 3])
         combined_values = tf.reshape(weighted_value, 
                                       shape = (batch_size, -1, self.hidden_size)
